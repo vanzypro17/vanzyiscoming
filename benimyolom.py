@@ -56,13 +56,13 @@ print("****************************" , filtered3.shape)
 
 alper = list()
 for i in range(0,box_number):
-    max = 0
+    en_buyuk = 0
     for j in range(0,80):
         temp = filtered3[i][j]
-        if temp > max:
-            max = temp
+        if temp > en_buyuk:
+            en_buyuk = temp
             indeks = j
-    alper.append([indeks , max])
+    alper.append([indeks , en_buyuk])
 
 squezzed_box_confidence = tf.squeeze(box_confidence)
 
@@ -96,14 +96,80 @@ for i in range(0,box_number):
     kutu = {"skor" : float(alper[i][1]) , "sınıf" : alper[i][0] , "x_min" :   float(x_min) , "y_min" :  float(y_min) ,"x_max" :  float(x_max) , "y_max" : float(y_max)}
     nonmaxsupression.append(kutu)
 
-    draw = ImageDraw.Draw(image)
-    draw.rectangle([x_min , y_min , x_max , y_max] , outline='red' , width=3)
+    #draw = ImageDraw.Draw(image)
+    #draw.rectangle([x_min , y_min , x_max , y_max] , outline='red' , width=3)
     #draw.text((x_min , y_min) , text= class_names[alper[i][0]] + str(alper[i][1]) , fill='red')
-    draw.text((x_min , y_min) , text= f"{class_names[alper[i][0]]} {alper[i][1].numpy():.2f}" , fill='red' , font=font1)
+    #draw.text((x_min , y_min) , text= f"{class_names[alper[i][0]]} {alper[i][1].numpy():.2f}" , fill='red' , font=font1)
 image.save("out/alperdeneme.jpg")
 
 
 print(nonmaxsupression)
+
+
+def iou(kutu1 , kutu2):
+    #kutu şekillerimiz bir dict ve sırasıyla skor ,sınıf , 4 tane koordinat için float
+    if kutu1["x_min"] >= kutu2["x_min"]:
+        iou_x_min = kutu1["x_min"]
+    else :
+        iou_x_min = kutu2["x_min"]
+    #************************************
+    if kutu1["x_max"] >= kutu2["x_max"]:
+        iou_x_max = kutu2["x_max"]
+    else:
+        iou_x_max = kutu1["x_max"]
+    #************************************
+    if kutu1["y_min"] >= kutu2["y_min"]:
+        iou_y_min = kutu1["y_min"]
+    else:
+        iou_y_min = kutu2["y_min"]
+    #*************************************
+    if kutu1["y_max"] >= kutu2["y_max"]:
+        iou_y_max = kutu2["y_max"]
+    else:
+        iou_y_max = kutu1["y_max"]
+    genislik = max(0 , (iou_x_max - iou_x_min))
+    yukseklik = max(0 , (iou_y_max - iou_y_min))
+    intersection_area = genislik * yukseklik
+
+    union = ((kutu1["x_max"] - kutu1["x_min"]) * (kutu1["y_max"] - kutu1["y_min"])) +  ((kutu2["x_max"] - kutu2["x_min"]) * (kutu2["y_max"] - kutu2["y_min"])) - intersection_area
+
+    return intersection_area / union
+
+nonmaxsupression.sort(key= lambda kutu : kutu["skor"] , reverse=True)
+kalanlar = list()
+while nonmaxsupression:
+    best = nonmaxsupression.pop(0)
+    kalanlar.append(best)
+
+    for i in nonmaxsupression[:]:
+        if i["sınıf"] == best["sınıf"] and iou(i , best) > 0.6:
+            nonmaxsupression.remove(i)
+
+
+box_number = len(kalanlar)
+
+for i in range(0 , box_number):
+    draw = ImageDraw.Draw(image)
+    draw.rectangle([kalanlar[i]["x_min"],kalanlar[i]["y_min"],kalanlar[i]["x_max"],kalanlar[i]["y_max"]] , width=3 ,outline='red')
+
+image.save("out/alperdeneme.jpg")
+    
+    
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+
 
 
 
